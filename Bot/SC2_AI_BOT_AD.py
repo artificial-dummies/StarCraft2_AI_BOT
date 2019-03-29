@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 import time
 
+# os.environ["SC2PATH"] = '/starcraftstuff/StarCraftII/'
+
 HEADLESS = False
 
 class ADBot(sc2.BotAI):
@@ -22,7 +24,7 @@ class ADBot(sc2.BotAI):
         print(game_result)
 
         if game_result == Result.Victory:
-            np.save("train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
+            np.save("/train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
     async def on_step(self, iteration):
         # what to do every step
