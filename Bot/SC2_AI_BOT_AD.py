@@ -1,12 +1,11 @@
 import sc2
-from sc2 import run_game, maps, Race, Difficulty
+from sc2 import run_game, maps, Race, Difficulty, position
 from sc2.player import Bot, Computer
 from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR, GATEWAY, \
-    CYBERNETICSCORE, STALKER, STARGATE, VOIDRAY
+    CYBERNETICSCORE, STALKER, STARGATE, VOIDRAY, OBSERVER, ROBOTICSFACILITY
 import random
 import cv2
 import numpy as np
-
 
 class ADBot(sc2.BotAI):
     def __init__(self):
@@ -207,7 +206,7 @@ CYBERNETICSCORE, STARGATE, VOIDRAY'''
                         await self.do(s.attack(random.choice(self.known_enemy_units)))
 
         
-    run_game(maps.get("AbyssalReefLE"), [
-        Bot(Race.Protoss, ADBot()),
-        Computer(Race.Zerg, Difficulty.Hard)
-    ], realtime=False)
+run_game(maps.get("AbyssalReefLE"), [
+    Bot(Race.Protoss, ADBot()),
+    Computer(Race.Zerg, Difficulty.Hard)
+], realtime=False)
