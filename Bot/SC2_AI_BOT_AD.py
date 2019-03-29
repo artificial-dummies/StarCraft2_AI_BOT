@@ -1,7 +1,7 @@
 import sc2
 from sc2 import run_game, maps, Race, Difficulty
 from sc2.player import Bot, Computer
-from sc2.constants import NEXUS, PROBE, PYLON
+from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR
 
 
 class ADBot(sc2.BotAI):
@@ -10,6 +10,8 @@ class ADBot(sc2.BotAI):
         await self.distribute_workers()  # in sc2/bot_ai.py
         await self.build_workers()
         await self.build_pylons()  # pylons are protoss supply buildings
+        await self.expand()         # expand to a new resource area.
+        await self.build_assimilator()  # getting gas
 
     async def build_workers(self):
         # nexus = command center
@@ -24,7 +26,23 @@ class ADBot(sc2.BotAI):
                 if self.can_afford(PYLON):
                     await self.build(PYLON, near=nexuses.first)
 
+    async def expand(self):
+        if self.units(NEXUS).amount < 2 and self.can_afford(NEXUS):
+            await self.expand_now()
+
+    async def build_assimilator(self):
+        for nexus in self.units(NEXUS).ready:
+            vaspenes = self.state.vespene_geyser.closer_than(25.0, nexus)
+            for vaspene in vaspenes:
+                if not self.can_afford(ASSIMILATOR):
+                    break
+                worker = self.select_build_worker(vaspene.position)
+                if worker is None:
+                    break
+                if not self.units(ASSIMILATOR).closer_than(1.0, vaspene).exists:
+                    await self.do(worker.build(ASSIMILATOR, vaspene))
+    
 run_game(maps.get("AbyssalReefLE"), [
     Bot(Race.Protoss, ADBot()),
     Computer(Race.Terran, Difficulty.Easy)
-], realtime=True)
+], realtime=False)
