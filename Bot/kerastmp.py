@@ -6,7 +6,7 @@ from keras.callbacks import TensorBoard
 import numpy as np
 import os
 import random
-
+#
 
 model = Sequential()
 
@@ -131,7 +131,7 @@ for i in range(hm_epochs):
                   shuffle=True,
                   verbose=1, callbacks=[tensorboard])
 
-        model.save("BasicCNN-{}-epochs-{}-LR-STAGE1".format(hm_epochs, learning_rate))
+        model.save("BasicCNN-{}-epochs-{}-LR-STAGE1_1".format(hm_epochs, learning_rate))
         current += increment
         if current > maximum:
             not_maximum = False
