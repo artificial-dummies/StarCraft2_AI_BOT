@@ -88,13 +88,13 @@ for i in range(hm_epochs):
             for d in data:
                 choice = np.argmax(d[0])
                 if choice == 0:
-                    no_attacks.append([d[0], d[1]])
+                    no_attacks.append(d)
                 elif choice == 1:
-                    attack_closest_to_nexus.append([d[0], d[1]])
+                    attack_closest_to_nexus.append(d)
                 elif choice == 2:
-                    attack_enemy_structures.append([d[0], d[1]])
+                    attack_enemy_structures.append(d)
                 elif choice == 3:
-                    attack_enemy_start.append([d[0], d[1]])
+                    attack_enemy_start.append(d)
 
         lengths = check_data()
         lowest_data = min(lengths)
