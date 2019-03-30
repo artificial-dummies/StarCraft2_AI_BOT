@@ -32,3 +32,4 @@ tmp/**
 .vscode/
 test-results.xml
 !build/
+*.model
