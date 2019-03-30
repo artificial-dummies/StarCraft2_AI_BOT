@@ -35,6 +35,7 @@ class ADBot(sc2.BotAI):
         self.do_something_after = 0
         self.use_model = use_model
         self.title = title
+        self.military_units = [ZEALOT, VOIDRAY, STALKER]
 
         ###############################
         # DICT {UNIT_ID:LOCATION}
@@ -52,10 +53,9 @@ class ADBot(sc2.BotAI):
                         7: self.build_stargate,
                         8: self.build_pylon,
                         9: self.defend_nexus,
-                        10: self.attack_known_enemy_unit,
-                        11: self.attack_known_enemy_structure,
-                        12: self.expand,  # might just be self.expand_now() lol
-                        13: self.do_nothing,
+                        10: self.attack,
+                        11: self.expand,  # might just be self.expand_now() lol
+                        12: self.do_nothing,
                         }
 
         self.train_data = []
@@ -76,7 +76,7 @@ class ADBot(sc2.BotAI):
 
         # print('Time:',self.state.game_loop)
         # self.time = (self.state.game_loop/22.4) / 60
-        print('Time:',self.time)
+        # print('Time:',self.time)
 
         if iteration % 5 == 0:
             await self.distribute_workers()
@@ -338,6 +338,7 @@ class ADBot(sc2.BotAI):
                     await self.build(PYLON, near=self.units(NEXUS).first.position.towards(self.game_info.map_center, 5))
 
     async def expand(self):
+        print("expand")
         try:
             if self.can_afford(NEXUS) and len(self.units(NEXUS)) < 3:
                 await self.expand_now()
@@ -349,34 +350,47 @@ class ADBot(sc2.BotAI):
         self.do_something_after = self.time + wait
 
     async def defend_nexus(self):
+        print("defend nexus")
         if len(self.known_enemy_units) > 0:
-            target = self.known_enemy_units.closest_to(random.choice(self.units(NEXUS)))
-            for u in self.units(VOIDRAY).idle:
-                await self.do(u.attack(target))
-            for u in self.units(STALKER).idle:
-                await self.do(u.attack(target))
-            for u in self.units(ZEALOT).idle:
-                await self.do(u.attack(target))
+            nexus = random.choice(self.units(NEXUS))
+            target = self.known_enemy_units.closest_to(nexus)
+            if nexus.distance_to(target) < 25:
+                for u in self.units(VOIDRAY).idle:
+                    await self.do(u.attack(target))
+                for u in self.units(STALKER).idle:
+                    await self.do(u.attack(target))
+                for u in self.units(ZEALOT).idle:
+                    await self.do(u.attack(target))
+
+    async def attack(self):
+        print("attack")
+        for unit_type in self.military_units:
+            if len(self.units(unit_type)) > 4:
+                if len(self.known_enemy_units) > 0:
+                    await self.attack_known_enemy_unit()
+                else:
+                    await self.attack_known_enemy_structure()
 
     async def attack_known_enemy_structure(self):
+        print("attack_known enemy structure")
         if len(self.known_enemy_structures) > 0:
-            target = random.choice(self.known_enemy_structures)
             for u in self.units(VOIDRAY).idle:
+                target = self.known_enemy_structures.closest_to(u)
                 await self.do(u.attack(target))
             for u in self.units(STALKER).idle:
+                target = self.known_enemy_structures.closest_to(u)
                 await self.do(u.attack(target))
             for u in self.units(ZEALOT).idle:
+                target = self.known_enemy_structures.closest_to(u)
                 await self.do(u.attack(target))
 
     async def attack_known_enemy_unit(self):
+        print("attack known enemy unit")
         if len(self.known_enemy_units) > 0:
-            target = self.known_enemy_units.closest_to(random.choice(self.units(NEXUS)))
-            for u in self.units(VOIDRAY).idle:
-                await self.do(u.attack(target))
-            for u in self.units(STALKER).idle:
-                await self.do(u.attack(target))
-            for u in self.units(ZEALOT).idle:
-                await self.do(u.attack(target))
+            for unit_type in self.military_units:
+                for u in self.units(unit_type).idle:
+                    target = self.known_enemy_units.closest_to(u).position
+                    await self.do(u.scan_move(target))
 
     async def do_something(self):
 
@@ -390,10 +404,9 @@ class ADBot(sc2.BotAI):
                        7: "build_stargate",
                        8: "build_pylon",
                        9: "defend_nexus",
-                       10: "attack_known_enemy_unit",
-                       11: "attack_known_enemy_structure",
-                       12: "expand",
-                       13: "do_nothing",
+                       10: "attack",
+                       11: "expand",
+                       12: "do_nothing",
                         }
 
 
@@ -414,13 +427,13 @@ class ADBot(sc2.BotAI):
                 choice = np.argmax(weighted_prediction)
                 print('Choice:',the_choices[choice])
             else:
-                worker_weight = 8
-                zealot_weight = 3
-                voidray_weight = 20
-                stalker_weight = 8
-                pylon_weight = 5
-                stargate_weight = 5
-                gateway_weight = 3
+                worker_weight = 1 #8
+                zealot_weight = 1 #3
+                voidray_weight = 2 #20
+                stalker_weight = 1 #8
+                pylon_weight = 1 #5
+                stargate_weight = 1 #5
+                gateway_weight = 1 #3
 
                 choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]
                 choice = random.choice(choice_weights)
@@ -436,5 +449,5 @@ class ADBot(sc2.BotAI):
         
 run_game(maps.get("AbyssalReefLE"), [
     Bot(Race.Protoss, ADBot()),
-    Computer(Race.Zerg, Difficulty.Easy)
+    Computer(Race.Zerg, Difficulty.Medium)
 ], realtime=False)
