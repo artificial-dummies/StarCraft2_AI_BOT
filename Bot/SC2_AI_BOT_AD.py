@@ -57,7 +57,7 @@ class ADBot(sc2.BotAI):
                         11: self.expand,  # might just be self.expand_now() lol
                         12: self.do_nothing,
                         13: self.build_colossus,
-                        # 14: self.build_carrier
+                        14: self.build_carrier
                         }
 
         self.train_data = []
@@ -258,11 +258,12 @@ class ADBot(sc2.BotAI):
             if self.can_afford(OBSERVER) and self.supply_left > 0:
                 await self.do(rf.train(OBSERVER))
                 break
-        if len(self.units(ROBOTICSFACILITY)) == 0:
+        if len(self.units(ROBOTICSFACILITY)) < len(self.units(NEXUS)):
             pylon = self.units(PYLON).ready.noqueue.random
             if self.units(CYBERNETICSCORE).ready.exists:
                 if self.can_afford(ROBOTICSFACILITY) and not self.already_pending(ROBOTICSFACILITY):
-                    await self.build(ROBOTICSFACILITY, near=pylon)
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    await self.build(ROBOTICSFACILITY, target)
 
 
     async def build_worker(self):
@@ -282,7 +283,8 @@ class ADBot(sc2.BotAI):
         if len(self.units(GATEWAY)) < len(self.units(NEXUS)) * 2:
             pylon = self.units(PYLON).ready.noqueue.random
             if self.can_afford(GATEWAY) and not self.already_pending(GATEWAY):
-                await self.build(GATEWAY, near=pylon.position.towards(self.game_info.map_center, 5))
+                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                await self.build(GATEWAY, target)
 
     async def build_voidray(self):
         stargates = self.units(STARGATE).ready.noqueue
@@ -305,7 +307,8 @@ class ADBot(sc2.BotAI):
         if not cybernetics_cores.exists:
             if self.units(GATEWAY).ready.exists:
                 if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
-                    await self.build(CYBERNETICSCORE, near=pylon.position.towards(self.game_info.map_center, 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    await self.build(CYBERNETICSCORE, target)
     
     async def build_carrier(self):
         stargates = self.units(STARGATE).ready
@@ -332,7 +335,8 @@ class ADBot(sc2.BotAI):
             if robotics_facility.ready.exists:
                 if not self.units(ROBOTICSBAY).exists:
                     if self.can_afford(ROBOTICSBAY):
-                        await self.build(ROBOTICSBAY, near=pylon.position.towards(self.game_info.map_center, 5))
+                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                        await self.build(ROBOTICSBAY, target)
 
     async def build_assimilator(self):
         for nexus in self.units(NEXUS).ready:
@@ -353,17 +357,20 @@ class ADBot(sc2.BotAI):
             pylon = self.units(PYLON).ready.random
             if self.units(CYBERNETICSCORE).ready.exists:
                 if self.can_afford(STARGATE) and not self.already_pending(STARGATE) and len(self.units(STARGATE)) < len(self.units(NEXUS)):
-                    await self.build(STARGATE, near=pylon.position.towards(self.game_info.map_center, 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    await self.build(STARGATE, target)
                 elif not fleet_beacon.exists:
                     if self.units(STARGATE).ready.exists:
                         if self.can_afford(FLEETBEACON) and not self.already_pending(FLEETBEACON):
-                            await self.build(FLEETBEACON, near=pylon.position.towards(self.game_info.map_center, 5))
+                            target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                            await self.build(FLEETBEACON, target)
 
             ########################################
             if not cybernetics_cores.exists:
                 if self.units(GATEWAY).ready.exists:
                     if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
-                        await self.build(CYBERNETICSCORE, near=pylon.position.towards(self.game_info.map_center, 5))
+                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                        await self.build(CYBERNETICSCORE, target)
 
     async def build_pylon(self):
         # changed supply left, and added a random position with more distance to either pylons or nexuses
@@ -379,7 +386,7 @@ class ADBot(sc2.BotAI):
                     choice = [target1, target2]
                     await self.build(PYLON, random.choice(choice))
                 else:
-                    await self.build(PYLON, near=self.units(NEXUS).first.position.towards(self.game_info.map_center, 5))
+                    await self.build(PYLON, near=self.units(NEXUS).first.position.towards(self.game_info.map_center, 7))
 
     async def expand(self):
         print("expand")
@@ -456,7 +463,7 @@ class ADBot(sc2.BotAI):
                        11: "expand",
                        12: "do_nothing",
                        13: "build_colossus",
-                    #    14: "build_carrier"
+                       14: "build_carrier"
                         }
 
 
@@ -485,7 +492,7 @@ class ADBot(sc2.BotAI):
                 stargate_weight = 1 #5
                 gateway_weight = 1 #3
 
-                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]#+1*[14]
+                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]+1*[14]
                 choice = random.choice(choice_weights)
 
             try:
@@ -493,7 +500,7 @@ class ADBot(sc2.BotAI):
             except Exception as e:
                 print(str(e))
 
-            y = np.zeros(14)
+            y = np.zeros(15)
             y[choice] = 1
             self.train_data.append([y, self.flipped])
         
