@@ -35,7 +35,7 @@ class ADBot(sc2.BotAI):
         self.do_something_after = 0
         self.use_model = use_model
         self.title = title
-        self.military_units = [ZEALOT, VOIDRAY, STALKER, CARRIER]
+        self.military_units = [ZEALOT, VOIDRAY, STALKER, CARRIER, COLOSSUS]
 
         ###############################
         # DICT {UNIT_ID:LOCATION}
@@ -320,7 +320,8 @@ class ADBot(sc2.BotAI):
         robotics_facility = self.units(ROBOTICSFACILITY)
         robotics_bay = self.units(ROBOTICSBAY)
         if robotics_bay.exists and robotics_facility.exists:
-            await self.do(random.choice(robotics_facility).train(COLOSSUS))
+            if self.can_afford(COLOSSUS):
+                await self.do(random.choice(robotics_facility).train(COLOSSUS))
         else:
             await self.build_robotics_bay()
 
