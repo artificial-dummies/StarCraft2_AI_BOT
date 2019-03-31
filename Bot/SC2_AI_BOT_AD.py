@@ -6,7 +6,7 @@ from sc2.player import Bot, Computer
 from sc2 import position
 from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR, GATEWAY, \
  CYBERNETICSCORE, STARGATE, VOIDRAY, SCV, DRONE, ROBOTICSFACILITY, OBSERVER, FLEETBEACON, \
- ZEALOT, STALKER, CARRIER
+ ZEALOT, STALKER, CARRIER, ROBOTICSBAY, COLOSSUS
 import random
 import cv2
 import numpy as np
@@ -56,7 +56,8 @@ class ADBot(sc2.BotAI):
                         10: self.attack,
                         11: self.expand,  # might just be self.expand_now() lol
                         12: self.do_nothing,
-                        13: self.build_carrier
+                        13: self.build_colossus,
+                        # 14: self.build_carrier
                         }
 
         self.train_data = []
@@ -312,6 +313,25 @@ class ADBot(sc2.BotAI):
         if stargates.exists and fleetbeacons.exists:
             if self.can_afford(CARRIER):
                 await self.do(random.choice(stargates).train(CARRIER))
+            else:
+                await self.build_airforce()
+
+    async def build_colossus(self):
+        robotics_facility = self.units(ROBOTICSFACILITY)
+        robotics_bay = self.units(ROBOTICSBAY)
+        if robotics_bay.exists and robotics_facility.exists:
+            await self.do(random.choice(robotics_bay).train(COLOSSUS))
+        else:
+            await self.build_robotics_bay()
+
+    async def build_robotics_bay(self):
+        robotics_facility = self.units(ROBOTICSFACILITY)
+        if self.units(PYLON).ready.exists:
+            pylon = self.units(PYLON).ready.random
+            if robotics_facility.ready.exists:
+                if not self.units(ROBOTICSBAY).exists:
+                    if self.can_afford(ROBOTICSBAY):
+                        await self.build(ROBOTICSBAY, near=pylon.position.towards(self.game_info.map_center, 5))
 
     async def build_assimilator(self):
         for nexus in self.units(NEXUS).ready:
@@ -363,7 +383,7 @@ class ADBot(sc2.BotAI):
     async def expand(self):
         print("expand")
         try:
-            if self.can_afford(NEXUS) and len(self.units(NEXUS)) < 3:
+            if self.can_afford(NEXUS) and len(self.units(NEXUS)):
                 await self.expand_now()
         except Exception as e:
             print(str(e))
@@ -434,7 +454,8 @@ class ADBot(sc2.BotAI):
                        10: "attack",
                        11: "expand",
                        12: "do_nothing",
-                       13: "build_carrier"
+                       13: "build_colossus",
+                    #    14: "build_carrier"
                         }
 
 
@@ -463,7 +484,7 @@ class ADBot(sc2.BotAI):
                 stargate_weight = 1 #5
                 gateway_weight = 1 #3
 
-                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]
+                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]#+1*[14]
                 choice = random.choice(choice_weights)
 
             try:
