@@ -6,7 +6,11 @@ from sc2.player import Bot, Computer
 from sc2 import position
 from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR, GATEWAY, \
  CYBERNETICSCORE, STARGATE, VOIDRAY, SCV, DRONE, ROBOTICSFACILITY, OBSERVER, FLEETBEACON, \
- ZEALOT, STALKER, CARRIER, ROBOTICSBAY, COLOSSUS
+ ZEALOT, STALKER, CARRIER, ROBOTICSBAY, COLOSSUS, FORGE, TWILIGHTCOUNCIL, \
+ PROTOSSGROUNDWEAPONSLEVEL1, PROTOSSGROUNDWEAPONSLEVEL2, PROTOSSGROUNDWEAPONSLEVEL3, \
+ PROTOSSGROUNDARMORSLEVEL1, PROTOSSGROUNDARMORSLEVEL2, PROTOSSGROUNDARMORSLEVEL3, \
+ PROTOSSSHIELDSLEVEL1, PROTOSSSHIELDSLEVEL2, PROTOSSSHIELDSLEVEL3
+ 
 import random
 import cv2
 import numpy as np
@@ -57,7 +61,10 @@ class ADBot(sc2.BotAI):
                         11: self.expand,  # might just be self.expand_now() lol
                         12: self.do_nothing,
                         13: self.build_colossus,
-                        14: self.build_carrier
+                        14: self.build_carrier,
+                        15: self.upgrade_attack,
+                        16: self.upgrade_armor,
+                        17: self.upgrade_shields
                         }
 
         self.train_data = []
@@ -254,7 +261,6 @@ class ADBot(sc2.BotAI):
 
     async def build_scout(self):
         for rf in self.units(ROBOTICSFACILITY).ready.noqueue:
-            print(len(self.units(OBSERVER)), self.time/3)
             if self.can_afford(OBSERVER) and self.supply_left > 0:
                 await self.do(rf.train(OBSERVER))
                 break
@@ -280,7 +286,7 @@ class ADBot(sc2.BotAI):
                 await self.do(random.choice(gateways).train(ZEALOT))
 
     async def build_gateway(self):
-        if len(self.units(GATEWAY)) < len(self.units(NEXUS)) * 2:
+        if len(self.units(GATEWAY)) < len(self.units(NEXUS).ready) * 2:
             pylon = self.units(PYLON).ready.noqueue.random
             if self.can_afford(GATEWAY) and not self.already_pending(GATEWAY):
                 target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
@@ -350,13 +356,29 @@ class ADBot(sc2.BotAI):
                 if not self.units(ASSIMILATOR).closer_than(1.0, vaspene).exists:
                     await self.do(worker.build(ASSIMILATOR, vaspene))
 
+    async def build_forge(self):
+        if self.units(NEXUS).ready.exists and self.units(PYLON).ready.exists:
+            pylon = self.units(PYLON).ready.random
+            if self.can_afford(FORGE) and not self.already_pending(FORGE) and len(self.units(NEXUS)) > len(self.units(FORGE)) and len(self.known_enemy_units(FORGE)) < 2:
+                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                await self.build(FORGE, target)
+                
+    async def build_twilight_council(self):
+        if self.units(CYBERNETICSCORE).ready.exists and self.units(PYLON).ready.exists:
+            pylon = self.units(PYLON).ready.random
+            twilightcouncil = self.units(TWILIGHTCOUNCIL)
+            if not twilightcouncil.exists:
+                if self.can_afford(TWILIGHTCOUNCIL) and not self.already_pending(TWILIGHTCOUNCIL):
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    await self.build(TWILIGHTCOUNCIL, target)
+
     async def build_airforce(self):
         cybernetics_cores = self.units(CYBERNETICSCORE)
         fleet_beacon = self.units(FLEETBEACON)
         if self.units(PYLON).ready.exists:
             pylon = self.units(PYLON).ready.random
             if self.units(CYBERNETICSCORE).ready.exists:
-                if self.can_afford(STARGATE) and not self.already_pending(STARGATE) and len(self.units(STARGATE)) < len(self.units(NEXUS)):
+                if self.can_afford(STARGATE) and not self.already_pending(STARGATE) and len(self.units(STARGATE)) < len(self.units(NEXUS).ready):
                     target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
                     await self.build(STARGATE, target)
                 elif not fleet_beacon.exists:
@@ -374,12 +396,10 @@ class ADBot(sc2.BotAI):
 
     async def build_pylon(self):
         # changed supply left, and added a random position with more distance to either pylons or nexuses
-        print("building pylon")
         nexuses = self.units(NEXUS).ready
         if nexuses.exists:
             if self.can_afford(PYLON) and not self.already_pending(PYLON) and self.supply_left < 5:
                 if self.units(PYLON).ready.exists:
-                    print("PYLON EXISTS!")
                     pylon = self.units(PYLON).ready.random
                     target1 = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 7))
                     target2 = await self.find_placement(PYLON, near=random.choice(self.units(NEXUS)).position.towards(self.game_info.map_center, 10))
@@ -389,7 +409,6 @@ class ADBot(sc2.BotAI):
                     await self.build(PYLON, near=self.units(NEXUS).first.position.towards(self.game_info.map_center, 7))
 
     async def expand(self):
-        print("expand")
         try:
             if self.can_afford(NEXUS) and len(self.units(NEXUS)):
                 await self.expand_now()
@@ -401,7 +420,6 @@ class ADBot(sc2.BotAI):
         self.do_something_after = self.time + wait
 
     async def defend_nexus(self):
-        print("defend nexus")
         if len(self.known_enemy_units) > 0:
             nexus = random.choice(self.units(NEXUS))
             target = self.known_enemy_units.closest_to(nexus)
@@ -414,41 +432,77 @@ class ADBot(sc2.BotAI):
                     await self.do(u.attack(target))
 
     async def attack(self):
-        print("attack")
         for unit_type in self.military_units:
             if len(self.units(unit_type)) > 4:
                 if len(self.known_enemy_units) > 0:
                     await self.attack_known_enemy_unit()
-                # else:
-                #     await self.attack_known_enemy_structure()
-
-    # async def attack_known_enemy_structure(self):
-    #     print("attack_known enemy structure")
-    #     if len(self.known_enemy_structures) > 0:
-    #         for unit_type in self.military_units:
-    #             for u in self.units(unit_type).idle:
-    #                 target = self.known_enemy_structures.closest_to(u).position
-    #                 await self.do(u.scan_move(target))
-            # for u in self.units(VOIDRAY).idle:
-            #     target = self.known_enemy_structures.closest_to(u)
-            #     await self.do(u.attack(target))
-            # for u in self.units(STALKER).idle:
-            #     target = self.known_enemy_structures.closest_to(u)
-            #     await self.do(u.attack(target))
-            # for u in self.units(ZEALOT).idle:
-            #     target = self.known_enemy_structures.closest_to(u)
-            #     await self.do(u.attack(target))
 
     async def attack_known_enemy_unit(self):
-        print("attack known enemy unit")
         if len(self.known_enemy_units) > 0:
             for unit_type in self.military_units:
                 for u in self.units(unit_type).idle:
                     target = random.choice(self.known_enemy_units).position
                     await self.do(u.scan_move(target))
 
-    async def do_something(self):
+    async def upgrade_attack(self):
+        if self.units(FORGE).ready.exists:
+            forge = self.units(FORGE).ready.noqueue
+            if forge.exists and self.already_pending_upgrade(PROTOSSGROUNDWEAPONSLEVEL1) == 0:
+                if self.can_afford(PROTOSSGROUNDWEAPONSLEVEL1):
+                    await self.do(forge.first.research(PROTOSSGROUNDWEAPONSLEVEL1))
+            elif self.already_pending_upgrade(PROTOSSGROUNDWEAPONSLEVEL2) == 0 and self.already_pending_upgrade(PROTOSSGROUNDWEAPONSLEVEL1) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready:
+                    if self.can_afford(PROTOSSGROUNDWEAPONSLEVEL2):                    
+                        await self.do(forge.first.research(PROTOSSGROUNDWEAPONSLEVEL2))
+                else:
+                    await self.build_twilight_council()
+            elif self.already_pending_upgrade(PROTOSSGROUNDWEAPONSLEVEL3) == 0 and self.already_pending_upgrade(PROTOSSGROUNDWEAPONSLEVEL2) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready:
+                    if self.can_afford(PROTOSSGROUNDWEAPONSLEVEL3):                
+                        await self.do(forge.first.research(PROTOSSGROUNDWEAPONSLEVEL3))
+        else:
+            await self.build_forge()
 
+    async def upgrade_armor(self):        
+        if self.units(FORGE).ready.exists:
+            forge = self.units(FORGE).ready.noqueue
+            if forge.exists and self.already_pending_upgrade(PROTOSSGROUNDARMORSLEVEL1) == 0:
+                if self.can_afford(PROTOSSGROUNDARMORSLEVEL1):
+                    await self.do(forge.first.research(PROTOSSGROUNDARMORSLEVEL1))
+            elif self.already_pending_upgrade(PROTOSSGROUNDARMORSLEVEL2) == 0 and self.already_pending_upgrade(PROTOSSGROUNDARMORSLEVEL1) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready:
+                    if self.can_afford(PROTOSSGROUNDARMORSLEVEL2):      
+                        await self.do(forge.first.research(PROTOSSGROUNDARMORSLEVEL2))
+                else:
+                    await self.build_twilight_council()
+            elif self.already_pending_upgrade(PROTOSSGROUNDARMORSLEVEL3) == 0 and self.already_pending_upgrade(PROTOSSGROUNDARMORSLEVEL2) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready: 
+                    if self.can_afford(PROTOSSGROUNDARMORSLEVEL3):       
+                        await self.do(forge.first.research(PROTOSSGROUNDARMORSLEVEL3))
+        else:
+            await self.build_forge()
+        
+
+    async def upgrade_shields(self):
+        if self.units(FORGE).ready.exists:
+            forge = self.units(FORGE).ready.noqueue
+            if forge.exists and self.already_pending_upgrade(PROTOSSSHIELDSLEVEL1) == 0:
+                if self.can_afford(PROTOSSSHIELDSLEVEL1):
+                    await self.do(forge.first.research(PROTOSSSHIELDSLEVEL1))
+            elif self.already_pending_upgrade(PROTOSSSHIELDSLEVEL2) == 0 and self.already_pending_upgrade(PROTOSSSHIELDSLEVEL1) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready:
+                    if self.can_afford(PROTOSSSHIELDSLEVEL2):                    
+                        await self.do(forge.first.research(PROTOSSSHIELDSLEVEL2))
+                else:
+                    await self.build_twilight_council()
+            elif self.already_pending_upgrade(PROTOSSSHIELDSLEVEL3) == 0 and self.already_pending_upgrade(PROTOSSSHIELDSLEVEL2) == 1:
+                if self.units(TWILIGHTCOUNCIL).ready:
+                    if self.can_afford(PROTOSSSHIELDSLEVEL3):                
+                        await self.do(forge.first.research(PROTOSSSHIELDSLEVEL3))
+        else:
+            await self.build_forge()
+
+    async def do_something(self):
         the_choices = {0: "build_scout",
                        1: "build_zealot",
                        2: "build_gateway",
@@ -463,9 +517,11 @@ class ADBot(sc2.BotAI):
                        11: "expand",
                        12: "do_nothing",
                        13: "build_colossus",
-                       14: "build_carrier"
-                        }
-
+                       14: "build_carrier",
+                       15: "upgrade_attack",
+                       16: "upgrade_armor",
+                       17: "upgrade_shields"
+                      }
 
         if self.time > self.do_something_after:
             if self.use_model:
@@ -492,7 +548,7 @@ class ADBot(sc2.BotAI):
                 stargate_weight = 1 #5
                 gateway_weight = 1 #3
 
-                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]+1*[14]
+                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]+1*[14]+1*[15]+1*[16]+1*[17]
                 choice = random.choice(choice_weights)
 
             try:
@@ -500,11 +556,11 @@ class ADBot(sc2.BotAI):
             except Exception as e:
                 print(str(e))
 
-            y = np.zeros(15)
+            y = np.zeros(18)
             y[choice] = 1
             self.train_data.append([y, self.flipped])
         
 run_game(maps.get("AbyssalReefLE"), [
     Bot(Race.Protoss, ADBot()),
-    Computer(Race.Zerg, Difficulty.Medium)
+    Computer(Race.Zerg, Difficulty.Hard)
 ], realtime=False)
