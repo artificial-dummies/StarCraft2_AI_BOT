@@ -5,8 +5,8 @@ from sc2 import run_game, maps, Race, Difficulty, Result
 from sc2.player import Bot, Computer
 from sc2 import position
 from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR, GATEWAY, \
- CYBERNETICSCORE, STARGATE, VOIDRAY, SCV, DRONE, ROBOTICSFACILITY, OBSERVER, \
- ZEALOT, STALKER
+ CYBERNETICSCORE, STARGATE, VOIDRAY, SCV, DRONE, ROBOTICSFACILITY, OBSERVER, FLEETBEACON, \
+ ZEALOT, STALKER, CARRIER
 import random
 import cv2
 import numpy as np
@@ -35,7 +35,7 @@ class ADBot(sc2.BotAI):
         self.do_something_after = 0
         self.use_model = use_model
         self.title = title
-        self.military_units = [ZEALOT, VOIDRAY, STALKER]
+        self.military_units = [ZEALOT, VOIDRAY, STALKER, CARRIER]
 
         ###############################
         # DICT {UNIT_ID:LOCATION}
@@ -50,12 +50,13 @@ class ADBot(sc2.BotAI):
                         4: self.build_stalker,
                         5: self.build_worker,
                         6: self.build_assimilator,
-                        7: self.build_stargate,
+                        7: self.build_airforce,
                         8: self.build_pylon,
                         9: self.defend_nexus,
                         10: self.attack,
                         11: self.expand,  # might just be self.expand_now() lol
                         12: self.do_nothing,
+                        13: self.build_carrier
                         }
 
         self.train_data = []
@@ -277,10 +278,10 @@ class ADBot(sc2.BotAI):
                 await self.do(random.choice(gateways).train(ZEALOT))
 
     async def build_gateway(self):
-        #if len(self.units(GATEWAY)) < 5:
-        pylon = self.units(PYLON).ready.noqueue.random
-        if self.can_afford(GATEWAY) and not self.already_pending(GATEWAY):
-            await self.build(GATEWAY, near=pylon.position.towards(self.game_info.map_center, 5))
+        if len(self.units(GATEWAY)) < len(self.units(NEXUS)) * 2:
+            pylon = self.units(PYLON).ready.noqueue.random
+            if self.can_afford(GATEWAY) and not self.already_pending(GATEWAY):
+                await self.build(GATEWAY, near=pylon.position.towards(self.game_info.map_center, 5))
 
     async def build_voidray(self):
         stargates = self.units(STARGATE).ready.noqueue
@@ -289,7 +290,7 @@ class ADBot(sc2.BotAI):
                 await self.do(random.choice(stargates).train(VOIDRAY))
         #####
         else:
-            await self.build_stargate()
+            await self.build_airforce()
 
     async def build_stalker(self):
         pylon = self.units(PYLON).ready.noqueue.random
@@ -304,6 +305,13 @@ class ADBot(sc2.BotAI):
             if self.units(GATEWAY).ready.exists:
                 if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
                     await self.build(CYBERNETICSCORE, near=pylon.position.towards(self.game_info.map_center, 5))
+    
+    async def build_carrier(self):
+        stargates = self.units(STARGATE).ready
+        fleetbeacons = self.units(FLEETBEACON)
+        if stargates.exists and fleetbeacons.exists:
+            if self.can_afford(CARRIER):
+                await self.do(random.choice(stargates).train(CARRIER))
 
     async def build_assimilator(self):
         for nexus in self.units(NEXUS).ready:
@@ -317,13 +325,18 @@ class ADBot(sc2.BotAI):
                 if not self.units(ASSIMILATOR).closer_than(1.0, vaspene).exists:
                     await self.do(worker.build(ASSIMILATOR, vaspene))
 
-    async def build_stargate(self):
+    async def build_airforce(self):
         cybernetics_cores = self.units(CYBERNETICSCORE)
+        fleet_beacon = self.units(FLEETBEACON)
         if self.units(PYLON).ready.exists:
             pylon = self.units(PYLON).ready.random
             if self.units(CYBERNETICSCORE).ready.exists:
-                if self.can_afford(STARGATE) and not self.already_pending(STARGATE):
+                if self.can_afford(STARGATE) and not self.already_pending(STARGATE) and len(self.units(STARGATE)) < len(self.units(NEXUS)):
                     await self.build(STARGATE, near=pylon.position.towards(self.game_info.map_center, 5))
+                elif not fleet_beacon.exists:
+                    if self.units(STARGATE).ready.exists:
+                        if self.can_afford(FLEETBEACON) and not self.already_pending(FLEETBEACON):
+                            await self.build(FLEETBEACON, near=pylon.position.towards(self.game_info.map_center, 5))
 
             ########################################
             if not cybernetics_cores.exists:
@@ -332,9 +345,19 @@ class ADBot(sc2.BotAI):
                         await self.build(CYBERNETICSCORE, near=pylon.position.towards(self.game_info.map_center, 5))
 
     async def build_pylon(self):
-            nexuses = self.units(NEXUS).ready
-            if nexuses.exists:
-                if self.can_afford(PYLON) and not self.already_pending(PYLON):
+        # changed supply left, and added a random position with more distance to either pylons or nexuses
+        print("building pylon")
+        nexuses = self.units(NEXUS).ready
+        if nexuses.exists:
+            if self.can_afford(PYLON) and not self.already_pending(PYLON) and self.supply_left < 5:
+                if self.units(PYLON).ready.exists:
+                    print("PYLON EXISTS!")
+                    pylon = self.units(PYLON).ready.random
+                    target1 = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 7))
+                    target2 = await self.find_placement(PYLON, near=random.choice(self.units(NEXUS)).position.towards(self.game_info.map_center, 10))
+                    choice = [target1, target2]
+                    await self.build(PYLON, random.choice(choice))
+                else:
                     await self.build(PYLON, near=self.units(NEXUS).first.position.towards(self.game_info.map_center, 5))
 
     async def expand(self):
@@ -368,28 +391,32 @@ class ADBot(sc2.BotAI):
             if len(self.units(unit_type)) > 4:
                 if len(self.known_enemy_units) > 0:
                     await self.attack_known_enemy_unit()
-                else:
-                    await self.attack_known_enemy_structure()
+                # else:
+                #     await self.attack_known_enemy_structure()
 
-    async def attack_known_enemy_structure(self):
-        print("attack_known enemy structure")
-        if len(self.known_enemy_structures) > 0:
-            for u in self.units(VOIDRAY).idle:
-                target = self.known_enemy_structures.closest_to(u)
-                await self.do(u.attack(target))
-            for u in self.units(STALKER).idle:
-                target = self.known_enemy_structures.closest_to(u)
-                await self.do(u.attack(target))
-            for u in self.units(ZEALOT).idle:
-                target = self.known_enemy_structures.closest_to(u)
-                await self.do(u.attack(target))
+    # async def attack_known_enemy_structure(self):
+    #     print("attack_known enemy structure")
+    #     if len(self.known_enemy_structures) > 0:
+    #         for unit_type in self.military_units:
+    #             for u in self.units(unit_type).idle:
+    #                 target = self.known_enemy_structures.closest_to(u).position
+    #                 await self.do(u.scan_move(target))
+            # for u in self.units(VOIDRAY).idle:
+            #     target = self.known_enemy_structures.closest_to(u)
+            #     await self.do(u.attack(target))
+            # for u in self.units(STALKER).idle:
+            #     target = self.known_enemy_structures.closest_to(u)
+            #     await self.do(u.attack(target))
+            # for u in self.units(ZEALOT).idle:
+            #     target = self.known_enemy_structures.closest_to(u)
+            #     await self.do(u.attack(target))
 
     async def attack_known_enemy_unit(self):
         print("attack known enemy unit")
         if len(self.known_enemy_units) > 0:
             for unit_type in self.military_units:
                 for u in self.units(unit_type).idle:
-                    target = self.known_enemy_units.closest_to(u).position
+                    target = random.choice(self.known_enemy_units).position
                     await self.do(u.scan_move(target))
 
     async def do_something(self):
@@ -401,12 +428,13 @@ class ADBot(sc2.BotAI):
                        4: "build_stalker",
                        5: "build_worker",
                        6: "build_assimilator",
-                       7: "build_stargate",
+                       7: "build_airforce",
                        8: "build_pylon",
                        9: "defend_nexus",
                        10: "attack",
                        11: "expand",
                        12: "do_nothing",
+                       13: "build_carrier"
                         }
 
 
