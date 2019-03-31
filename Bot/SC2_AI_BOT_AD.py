@@ -320,7 +320,7 @@ class ADBot(sc2.BotAI):
         robotics_facility = self.units(ROBOTICSFACILITY)
         robotics_bay = self.units(ROBOTICSBAY)
         if robotics_bay.exists and robotics_facility.exists:
-            await self.do(random.choice(robotics_bay).train(COLOSSUS))
+            await self.do(random.choice(robotics_facility).train(COLOSSUS))
         else:
             await self.build_robotics_bay()
 
