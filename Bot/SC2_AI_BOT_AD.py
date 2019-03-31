@@ -574,7 +574,7 @@ class ADBot(sc2.BotAI):
                 assimilator_weight = 1
 
                 prediction = self.model.predict([self.flipped.reshape([-1, 176, 200, 1])])
-                weights = [1, zealot_weight, gateway_weight, voidray_weight, stalker_weight, worker_weight, assimilator_weight, stargate_weight, pylon_weight, 1, 1, 1, 1, 1]
+                weights = [1, zealot_weight, gateway_weight, voidray_weight, stalker_weight, worker_weight, assimilator_weight, stargate_weight, pylon_weight, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
                 weighted_prediction = prediction[0]*weights
                 choice = np.argmax(weighted_prediction)
                 print('Choice:',the_choices[choice])
