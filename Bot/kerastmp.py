@@ -41,7 +41,7 @@ model.add(Dropout(0.2))
 model.add(Flatten())
 model.add(Dense(1024, activation='relu'))
 model.add(Dropout(0.5))
-model.add(Dense(14, activation='softmax'))
+model.add(Dense(20, activation='softmax'))
 
 learning_rate = 0.001
 opt = keras.optimizers.adam(lr=learning_rate)#, decay=1e-6)
@@ -54,7 +54,7 @@ tensorboard = TensorBoard(log_dir="logs/STAGE2-{}-{}".format(int(time.time()), l
 
 train_data_dir = "train_data"
 
-model = keras.models.load_model('BasicCNN-5000-epochs-0.001-LR-STAGE2')
+model = keras.models.load_model('AD-100-epochs-0.001-LR-STAGE1.model')
 
 
 def check_data(choices):
@@ -152,7 +152,7 @@ for i in range(hm_epochs):
                       epochs=1,
                       verbose=1, callbacks=[tensorboard])
 
-            model.save("BasicCNN-5000-epochs-0.001-LR-STAGE2")
+            model.save("AD-100-epochs-0.001-LR-STAGE1.model")
         except Exception as e:
             print(str(e))
         current += increment

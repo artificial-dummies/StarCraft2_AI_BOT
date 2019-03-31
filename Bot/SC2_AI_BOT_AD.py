@@ -74,12 +74,15 @@ class ADBot(sc2.BotAI):
         self.train_data = []
         if self.use_model:
             print("USING MODEL!")
-            self.model = keras.models.load_model("BasicCNN-10-epochs-0.0001-LR-STAGE1.model")
+            self.model = keras.models.load_model("AD-100-epochs-0.001-LR-STAGE1.model")
 
 
     def on_end(self, game_result):
         print('--- on_end called ---')
         print(game_result, self.use_model)
+
+        if game_result == Result.Victory:
+            np.save("train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
         if self.use_model:
             with open("gameout-model-vs-easy.txt","a") as f:
@@ -272,7 +275,7 @@ class ADBot(sc2.BotAI):
             pylon = self.units(PYLON).ready.noqueue.random
             if self.units(CYBERNETICSCORE).ready.exists:
                 if self.can_afford(ROBOTICSFACILITY) and not self.already_pending(ROBOTICSFACILITY):
-                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                     await self.build(ROBOTICSFACILITY, target)
 
 
@@ -293,7 +296,7 @@ class ADBot(sc2.BotAI):
         if len(self.units(GATEWAY)) < len(self.units(NEXUS).ready) * 2:
             pylon = self.units(PYLON).ready.noqueue.random
             if self.can_afford(GATEWAY) and not self.already_pending(GATEWAY):
-                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                 await self.build(GATEWAY, target)
 
     async def build_voidray(self):
@@ -317,7 +320,7 @@ class ADBot(sc2.BotAI):
         if not cybernetics_cores.exists:
             if self.units(GATEWAY).ready.exists:
                 if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
-                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                     await self.build(CYBERNETICSCORE, target)
     
     async def build_carrier(self):
@@ -345,7 +348,7 @@ class ADBot(sc2.BotAI):
             if robotics_facility.ready.exists:
                 if not self.units(ROBOTICSBAY).exists:
                     if self.can_afford(ROBOTICSBAY):
-                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                         await self.build(ROBOTICSBAY, target)
 
     async def build_assimilator(self):
@@ -364,7 +367,7 @@ class ADBot(sc2.BotAI):
         if self.units(NEXUS).ready.exists and self.units(PYLON).ready.exists:
             pylon = self.units(PYLON).ready.random
             if self.can_afford(FORGE) and not self.already_pending(FORGE) and len(self.units(NEXUS)) > len(self.units(FORGE)) and len(self.known_enemy_units(FORGE)) < 2:
-                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                 await self.build(FORGE, target)
                 
     async def build_twilight_council(self):
@@ -373,7 +376,7 @@ class ADBot(sc2.BotAI):
             twilightcouncil = self.units(TWILIGHTCOUNCIL)
             if not twilightcouncil.exists:
                 if self.can_afford(TWILIGHTCOUNCIL) and not self.already_pending(TWILIGHTCOUNCIL):
-                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                     await self.build(TWILIGHTCOUNCIL, target)
 
     async def build_airforce(self):
@@ -383,19 +386,19 @@ class ADBot(sc2.BotAI):
             pylon = self.units(PYLON).ready.random
             if self.units(CYBERNETICSCORE).ready.exists:
                 if self.can_afford(STARGATE) and not self.already_pending(STARGATE) and len(self.units(STARGATE)) < len(self.units(NEXUS).ready):
-                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                    target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                     await self.build(STARGATE, target)
                 elif not fleet_beacon.exists:
                     if self.units(STARGATE).ready.exists:
                         if self.can_afford(FLEETBEACON) and not self.already_pending(FLEETBEACON):
-                            target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                            target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                             await self.build(FLEETBEACON, target)
 
             ########################################
             if not cybernetics_cores.exists:
                 if self.units(GATEWAY).ready.exists:
                     if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
-                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 5))
+                        target = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 5))
                         await self.build(CYBERNETICSCORE, target)
 
     async def build_pylon(self):
@@ -405,7 +408,7 @@ class ADBot(sc2.BotAI):
             if self.can_afford(PYLON) and not self.already_pending(PYLON) and self.supply_left < 5:
                 if self.units(PYLON).ready.exists:
                     pylon = self.units(PYLON).ready.random
-                    target1 = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(self.game_info.map_center), 7))
+                    target1 = await self.find_placement(PYLON, near=pylon.position.towards(pylon.position.random_on_distance(pylon.position), 7))
                     target2 = await self.find_placement(PYLON, near=random.choice(self.units(NEXUS)).position.towards(self.game_info.map_center, 10))
                     choice = [target1, target2]
                     await self.build(PYLON, random.choice(choice))
@@ -598,5 +601,5 @@ class ADBot(sc2.BotAI):
         
 run_game(maps.get("AbyssalReefLE"), [
     Bot(Race.Protoss, ADBot()),
-    Computer(Race.Zerg, Difficulty.Medium)
+    Computer(Race.Zerg, Difficulty.Easy)
 ], realtime=False)
