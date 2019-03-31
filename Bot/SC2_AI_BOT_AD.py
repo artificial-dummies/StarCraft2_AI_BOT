@@ -9,7 +9,9 @@ from sc2.constants import NEXUS, PROBE, PYLON, ASSIMILATOR, GATEWAY, \
  ZEALOT, STALKER, CARRIER, ROBOTICSBAY, COLOSSUS, FORGE, TWILIGHTCOUNCIL, \
  PROTOSSGROUNDWEAPONSLEVEL1, PROTOSSGROUNDWEAPONSLEVEL2, PROTOSSGROUNDWEAPONSLEVEL3, \
  PROTOSSGROUNDARMORSLEVEL1, PROTOSSGROUNDARMORSLEVEL2, PROTOSSGROUNDARMORSLEVEL3, \
- PROTOSSSHIELDSLEVEL1, PROTOSSSHIELDSLEVEL2, PROTOSSSHIELDSLEVEL3
+ PROTOSSSHIELDSLEVEL1, PROTOSSSHIELDSLEVEL2, PROTOSSSHIELDSLEVEL3, \
+ PROTOSSAIRWEAPONSLEVEL1, PROTOSSAIRWEAPONSLEVEL2, PROTOSSAIRWEAPONSLEVEL3, \
+ PROTOSSAIRARMORSLEVEL1, PROTOSSAIRARMORSLEVEL2, PROTOSSAIRARMORSLEVEL3
  
 import random
 import cv2
@@ -64,7 +66,9 @@ class ADBot(sc2.BotAI):
                         14: self.build_carrier,
                         15: self.upgrade_attack,
                         16: self.upgrade_armor,
-                        17: self.upgrade_shields
+                        17: self.upgrade_shields,
+                        18: self.upgrade_air_attack,
+                        19: self.upgrade_air_armor
                         }
 
         self.train_data = []
@@ -502,6 +506,36 @@ class ADBot(sc2.BotAI):
         else:
             await self.build_forge()
 
+    async def upgrade_air_attack(self):
+        if self.units(CYBERNETICSCORE).ready.exists:
+            cybernetics_core = self.units(CYBERNETICSCORE).ready.noqueue
+            if cybernetics_core.exists and self.already_pending_upgrade(PROTOSSAIRWEAPONSLEVEL1) == 0:
+                if self.can_afford(PROTOSSAIRWEAPONSLEVEL1):
+                    await self.do(cybernetics_core.first.research(PROTOSSAIRWEAPONSLEVEL1))
+            elif self.already_pending_upgrade(PROTOSSAIRWEAPONSLEVEL2) == 0 and self.already_pending_upgrade(PROTOSSAIRWEAPONSLEVEL1) == 1:
+                if self.units(FLEETBEACON).ready:
+                    if self.can_afford(PROTOSSAIRWEAPONSLEVEL2):                    
+                        await self.do(cybernetics_core.first.research(PROTOSSAIRWEAPONSLEVEL2))
+            elif self.already_pending_upgrade(PROTOSSAIRWEAPONSLEVEL3) == 0 and self.already_pending_upgrade(PROTOSSAIRWEAPONSLEVEL2) == 1:
+                if self.units(FLEETBEACON).ready:
+                    if self.can_afford(PROTOSSAIRWEAPONSLEVEL3):                
+                        await self.do(cybernetics_core.first.research(PROTOSSAIRWEAPONSLEVEL3))
+
+    async def upgrade_air_armor(self):        
+        if self.units(CYBERNETICSCORE).ready.exists:
+            cybernetics_core = self.units(CYBERNETICSCORE).ready.noqueue
+            if cybernetics_core.exists and self.already_pending_upgrade(PROTOSSAIRARMORSLEVEL1) == 0:
+                if self.can_afford(PROTOSSAIRARMORSLEVEL1):
+                    await self.do(cybernetics_core.first.research(PROTOSSAIRARMORSLEVEL1))
+            elif self.already_pending_upgrade(PROTOSSAIRARMORSLEVEL2) == 0 and self.already_pending_upgrade(PROTOSSAIRARMORSLEVEL1) == 1:
+                if self.units(FLEETBEACON).ready:
+                    if self.can_afford(PROTOSSAIRARMORSLEVEL2):                    
+                        await self.do(cybernetics_core.first.research(PROTOSSAIRARMORSLEVEL2))
+            elif self.already_pending_upgrade(PROTOSSAIRARMORSLEVEL3) == 0 and self.already_pending_upgrade(PROTOSSAIRARMORSLEVEL2) == 1:
+                if self.units(FLEETBEACON).ready:
+                    if self.can_afford(PROTOSSAIRARMORSLEVEL3):                
+                        await self.do(cybernetics_core.first.research(PROTOSSAIRARMORSLEVEL3))
+
     async def do_something(self):
         the_choices = {0: "build_scout",
                        1: "build_zealot",
@@ -520,7 +554,9 @@ class ADBot(sc2.BotAI):
                        14: "build_carrier",
                        15: "upgrade_attack",
                        16: "upgrade_armor",
-                       17: "upgrade_shields"
+                       17: "upgrade_shields",
+                       18: "upgrade_air_attack",
+                       19: "upgrade_air_armor"
                       }
 
         if self.time > self.do_something_after:
@@ -548,7 +584,7 @@ class ADBot(sc2.BotAI):
                 stargate_weight = 1 #5
                 gateway_weight = 1 #3
 
-                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]+1*[14]+1*[15]+1*[16]+1*[17]
+                choice_weights = 1*[0]+zealot_weight*[1]+gateway_weight*[2]+voidray_weight*[3]+stalker_weight*[4]+worker_weight*[5]+1*[6]+stargate_weight*[7]+pylon_weight*[8]+1*[9]+1*[10]+1*[11]+1*[12]+1*[13]+1*[14]+1*[15]+1*[16]+1*[17]+1*[18]+1*[19]
                 choice = random.choice(choice_weights)
 
             try:
@@ -556,11 +592,11 @@ class ADBot(sc2.BotAI):
             except Exception as e:
                 print(str(e))
 
-            y = np.zeros(18)
+            y = np.zeros(20)
             y[choice] = 1
             self.train_data.append([y, self.flipped])
         
 run_game(maps.get("AbyssalReefLE"), [
     Bot(Race.Protoss, ADBot()),
-    Computer(Race.Zerg, Difficulty.Hard)
+    Computer(Race.Zerg, Difficulty.Medium)
 ], realtime=False)

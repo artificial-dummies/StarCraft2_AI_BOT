@@ -98,7 +98,12 @@ for i in range(hm_epochs):
                        11: [],
                        12: [],
                        13: [],
-                       14: []
+                       14: [],
+                       15: [],
+                       16: [],
+                       17: [],
+                       18: [],
+                       19: []
                        }
 
             for file in all_files[current:current+increment]:
