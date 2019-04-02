@@ -12,14 +12,14 @@ import cv2
 import time
 
 
-def get_session(gpu_fraction=0.85):
+def get_session(gpu_fraction=0.75):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_fraction)
     return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 backend.set_session(get_session())
 
 
 model = Sequential()
-model.add(Conv2D(32, (7, 7), padding='same',
+model.add(Conv2D(32, (3, 3), padding='same',
                  input_shape=(176, 200, 1),
                  activation='relu'))
 model.add(Conv2D(32, (3, 3), activation='relu'))
@@ -50,14 +50,14 @@ model.compile(loss='categorical_crossentropy',
               optimizer=opt,
               metrics=['accuracy'])
 
-tensorboard = TensorBoard(log_dir="logs/STAGE2-{}-{}".format(int(time.time()), learning_rate))
+tensorboard = TensorBoard(log_dir="logs/STAGE1-{}-{}".format(int(time.time()), learning_rate))
 
 train_data_dir = "train_data"
 
-model = keras.models.load_model('AD-100-epochs-0.001-LR-STAGE1.model')
+#model = keras.models.load_model('AD-10-epochs-0.001-LR-STAGE1.model')
 
 
-def check_data(choices):
+def check_data(choiceCol):
     total_data = 0
 
     lengths = []
@@ -70,7 +70,7 @@ def check_data(choices):
     return lengths
 
 
-hm_epochs = 5000
+hm_epochs = 1
 
 for i in range(hm_epochs):
     current = 0
@@ -137,7 +137,7 @@ for i in range(hm_epochs):
             print(len(train_data))
 
             test_size = 100
-            batch_size = 128  # 128 best so far.
+            batch_size = 64  # 128 best so far.
 
             x_train = np.array([i[1] for i in train_data[:-test_size]]).reshape(-1, 176, 200, 1)
             y_train = np.array([i[0] for i in train_data[:-test_size]])
@@ -152,7 +152,7 @@ for i in range(hm_epochs):
                       epochs=1,
                       verbose=1, callbacks=[tensorboard])
 
-            model.save("AD-100-epochs-0.001-LR-STAGE1.model")
+            model.save("AD-10-epochs-0.001-LR-STAGE1.model")
         except Exception as e:
             print(str(e))
         current += increment
