@@ -667,18 +667,18 @@ class ADBot(sc2.BotAI):
             # to optimize this so that choices made that were a success where stored.                                                       #
              ###############################################################################################################################
 
-            if self.choice_success:
-                y = np.zeros(20)
-                y[choice] = 1
-                self.train_data.append([y, self.flipped])
-                self.choice_success = False
+            # if self.choice_success:
+            #     y = np.zeros(20)
+            #     y[choice] = 1
+            #     self.train_data.append([y, self.flipped])
+            #     self.choice_success = False
 
             # creates an array of size 20 (number of choises) and makes them all 0
-            # y = np.zeros(20)
-            # y[choice] = 1   # The choice made is stored as 1
+            y = np.zeros(20)
+            y[choice] = 1   # The choice made is stored as 1
 
             # we append the choice made along with the image that was in the cv2 window at that given moment
-            # self.train_data.append([y, self.flipped])
+            self.train_data.append([y, self.flipped])
 
 # Here we run the game, load up the map, our bot and a computer opponent.
 run_game(maps.get("AbyssalReefLE"), [
