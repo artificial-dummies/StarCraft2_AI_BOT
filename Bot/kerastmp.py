@@ -11,7 +11,7 @@ import random
 import cv2
 import time
 
-
+# This fractions up the memory of GPU so it can be be allocated for training
 def get_session(gpu_fraction=0.75):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_fraction)
     return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -38,11 +38,13 @@ model.add(Conv2D(128, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.2))
 
+# Here we gather the output to apply on the model.
 model.add(Flatten())
 model.add(Dense(1024, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(20, activation='softmax'))
 
+# setting the learning rate, can be adjusted to influence the model
 learning_rate = 0.001
 opt = keras.optimizers.adam(lr=learning_rate)#, decay=1e-6)
 
@@ -50,6 +52,7 @@ model.compile(loss='categorical_crossentropy',
               optimizer=opt,
               metrics=['accuracy'])
 
+# output for tensorboard to view the loss and accuracy
 tensorboard = TensorBoard(log_dir="logs/STAGE1-{}-{}".format(int(time.time()), learning_rate))
 
 train_data_dir = "train_data"
@@ -70,21 +73,22 @@ def check_data(choices):
     print("Total data length now is:", total_data)
     return lengths
 
-
+# setting epochs for training, increase this for more accurate training results, beware of GPU and CPU capabilities
 hm_epochs = 1
 
 for i in range(hm_epochs):
-    current = 0
-    increment = 50
-    not_maximum = True
-    all_files = os.listdir(train_data_dir)
-    maximum = len(all_files)
-    random.shuffle(all_files)
+    current = 0     # starting point in data, changes in itterations
+    increment = 50  # increment per itteration
+    not_maximum = True  # Checks if you have reached the end of the training data
+    all_files = os.listdir(train_data_dir)      # gets all training files
+    maximum = len(all_files)        # sets the total number of training files
+    random.shuffle(all_files)       # shuffle up the files for random selection of training files
 
     while not_maximum:
         try:
             print("WORKING ON {}:{}, EPOCH:{}".format(current, current+increment, i))
 
+            # choices the agent has
             choices = {0: [],
                        1: [],
                        2: [],
@@ -107,6 +111,7 @@ for i in range(hm_epochs):
                        19: []
                        }
 
+            # increment through each file and select it
             for file in all_files[current:current+increment]:
                 try:
                     full_path = os.path.join(train_data_dir, file)
@@ -122,6 +127,7 @@ for i in range(hm_epochs):
 
             lowest_data = min(lengths)
 
+            # shuffle up the choices so that they do not line up in order
             for choice in choices:
                 random.shuffle(choices[choice])
                 choices[choice] = choices[choice][:lowest_data]
@@ -130,22 +136,28 @@ for i in range(hm_epochs):
 
             train_data = []
 
+            # append choices in the training file to an array
             for choice in choices:
                 for d in choices[choice]:
                     train_data.append(d)
 
+            # shuffle up the choices so that they do not line up in order
             random.shuffle(train_data)
             print(len(train_data))
 
+            # determine the test and batch size, modified depending on your hardware
             test_size = 100
             batch_size = 64  # 128 best so far.
 
+            # create input variables to send into the model from the first 100 if the data + the CV2 we have in the data
             x_train = np.array([i[1] for i in train_data[:-test_size]]).reshape(-1, 176, 200, 1)
             y_train = np.array([i[0] for i in train_data[:-test_size]])
 
+            # create input variables for validation to send into the model from the first 100 if the data + the CV2 we have in the data
             x_test = np.array([i[1] for i in train_data[-test_size:]]).reshape(-1, 176, 200, 1)
             y_test = np.array([i[0] for i in train_data[-test_size:]])
 
+            # send in to the modal for training
             model.fit(x_train, y_train,
                       batch_size=batch_size,
                       validation_data=(x_test, y_test),
@@ -153,9 +165,10 @@ for i in range(hm_epochs):
                       epochs=1,
                       verbose=1, callbacks=[tensorboard])
 
+            # save the model
             model.save("AD-10-epochs-0.001-LR-STAGE1.model")
         except Exception as e:
             print(str(e))
-        current += increment
-        if current > maximum:
+        current += increment # increment for next itteration
+        if current > maximum: # check if end of test files has been reached
             not_maximum = False
