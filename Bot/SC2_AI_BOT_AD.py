@@ -23,7 +23,7 @@ import keras
 
 os.environ["SC2PATH"] = 'D:/StarCraft II/'
 
-HEADLESS = False
+HEADLESS = True
 
 # Daniel PC command
 # D:/Python/Python37-32/python.exe c:/Users/danie/Desktop/StarCraft2_AI_BOT/Bot/SC2_AI_BOT_AD.py
@@ -46,7 +46,7 @@ class ADBot(sc2.BotAI):
 
         ###############################
         # DICT {UNIT_ID:LOCATION}
-        # every iteration, make sure that unit id still exists!
+        # every iteration, make susre that unit id still exists!
         self.scouts_and_spots = {}
 
         # ADDED THE CHOICES #
@@ -83,7 +83,7 @@ class ADBot(sc2.BotAI):
         print(game_result, self.use_model)
 
         if game_result == Result.Victory:
-            np.save("train_data/{}.npy".format(str(int(time.time()))), np.array(self.train_data))
+            np.save("train_data/DV{}.npy".format(str(int(time.time()))), np.array(self.train_data))
 
         if self.use_model:
             with open("gameout-model-vs-easy.txt","a") as f:
@@ -634,11 +634,12 @@ class ADBot(sc2.BotAI):
             except Exception as e:
                 print(str(e))
 
+            if self.choice_success:
+                y = np.zeros(20)
+                y[choice] = 1
+                self.train_data.append([y, self.flipped])
+                self.choice_success = False
 
-            y = np.zeros(20)
-            y[choice] = 1
-            self.train_data.append([y, self.flipped])
-            self.choice_success = False
 
 
 run_game(maps.get("AbyssalReefLE"), [
