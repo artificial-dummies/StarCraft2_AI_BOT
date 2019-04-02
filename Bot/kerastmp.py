@@ -17,7 +17,7 @@ def get_session(gpu_fraction=0.75):
     return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 backend.set_session(get_session())
 
-
+# adding hidden layers for the network, use padding = same for less loss (pads zeroes along the edge of the image)
 model = Sequential()
 model.add(Conv2D(32, (3, 3), padding='same',
                  input_shape=(176, 200, 1),
@@ -54,10 +54,11 @@ tensorboard = TensorBoard(log_dir="logs/STAGE1-{}-{}".format(int(time.time()), l
 
 train_data_dir = "train_data"
 
-#model = keras.models.load_model('AD-10-epochs-0.001-LR-STAGE1.model')
+# loads up previous model, uncomment on the first go
+model = keras.models.load_model('AD-10-epochs-0.001-LR-STAGE1.model')
 
-
-def check_data(choiceCol):
+# checks the choises made in the data and see the length
+def check_data(choices):
     total_data = 0
 
     lengths = []
