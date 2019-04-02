@@ -48,6 +48,7 @@ model.add(Dense(20, activation='softmax'))
 learning_rate = 0.001
 opt = keras.optimizers.adam(lr=learning_rate)#, decay=1e-6)
 
+# compile the model
 model.compile(loss='categorical_crossentropy',
               optimizer=opt,
               metrics=['accuracy'])
