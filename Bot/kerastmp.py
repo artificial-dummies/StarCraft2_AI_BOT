@@ -11,13 +11,13 @@ import random
 import cv2
 import time
 
-
+# Gets 85% of the gpu memory for the computations here
 def get_session(gpu_fraction=0.85):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_fraction)
     return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 backend.set_session(get_session())
 
-
+# adding hidden layers for the network, use padding = same for less loss (pads zeroes along the edge of the image)
 model = Sequential()
 model.add(Conv2D(32, (7, 7), padding='same',
                  input_shape=(176, 200, 1),
@@ -54,9 +54,10 @@ tensorboard = TensorBoard(log_dir="logs/STAGE2-{}-{}".format(int(time.time()), l
 
 train_data_dir = "train_data"
 
+# loads up previous model, uncomment on the first go
 model = keras.models.load_model('AD-100-epochs-0.001-LR-STAGE1.model')
 
-
+# checks the choises made in the data and see the length
 def check_data(choices):
     total_data = 0
 
@@ -71,7 +72,7 @@ def check_data(choices):
 
 
 hm_epochs = 5000
-
+# builds the tree, epochs is the number of iterations it goes through
 for i in range(hm_epochs):
     current = 0
     increment = 50
