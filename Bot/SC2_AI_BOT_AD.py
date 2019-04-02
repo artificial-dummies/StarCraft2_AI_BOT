@@ -21,12 +21,10 @@ import time
 import math
 import keras
 
+# Uncomment and change this path if StarCraft II is not installed in the default location.
 # os.environ["SC2PATH"] = 'D:/StarCraft II/'
 
 HEADLESS = True
-
-# Daniel PC command
-# D:/Python/Python37-32/python.exe c:/Users/danie/Desktop/StarCraft2_AI_BOT/Bot/SC2_AI_BOT_AD.py
 
 def get_session(gpu_fraction=0.3):
     """Assume that you have 6GB of GPU memory and want to allocate ~2GB"""
